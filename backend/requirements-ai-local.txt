@@ -1,0 +1,8 @@
+# OPTIONAL: only for AI_PROVIDER=diffusers (local GPU inference, experimental and untested in this project).
+# Install a CUDA build of PyTorch for your GPU first: https://pytorch.org/get-started/locally/
+torch
+diffusers>=0.30
+transformers>=4.44
+accelerate>=0.33
+safetensors
+sentencepiece

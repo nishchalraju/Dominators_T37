@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+storage/
+# external datasets are never committed (licences forbid redistribution); keep only the folder markers
+datasets/external/*
+!datasets/external/.gitkeep
+!datasets/external/README.md
+datasets/processed/*
+!datasets/processed/.gitkeep

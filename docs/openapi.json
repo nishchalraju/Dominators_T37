@@ -1,0 +1,4026 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SketchAssist AI API",
+    "description": "\n**SketchAssist AI** - multilingual (English / Kannada / Hindi) forensic sketch assistance and case management.\n\n> **Preliminary investigative aid - requires human review.** This system does not identify people. It performs no face recognition, no face matching and no search of photo databases, and its output must never be treated as evidence of identity.\n\n### How to try it\n1. `POST /api/auth/register` (the first account becomes the administrator), then use the returned `access_token`\n   with the **Authorize** button above.\n2. Open a case, parse a description, generate a sketch with `engine=schematic` (rule-based, not AI) and revise it.\n3. AI engines need credentials (see `GET /api/engines`); without them they answer **503** with setup steps.\n\n### Conventions\n* Errors always look like `{\"detail\": \"...\", \"code\": \"machine_code\"}` (validation errors add `fields`).\n* A case that is not yours looks exactly like a case that does not exist (404).\n",
+    "version": "3.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "summary": "Is the server (and its database) up?",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meta/attributes": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "summary": "Controlled vocabulary and shared texts",
+        "description": "The single source of truth for attribute names, allowed values and labels. The web UI builds its forms from this, so it can never offer a value the backend would reject. No sign-in needed.",
+        "operationId": "vocabulary_api_meta_attributes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Vocabulary Api Meta Attributes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Create an account",
+        "description": "Creates an investigator account and signs you in. The **first** account created on a fresh installation becomes the administrator (needed for dataset inspection and evaluation runs).",
+        "operationId": "register_api_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Username already taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Sign in",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "The signed-in user",
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Dashboard numbers",
+        "description": "Every number is counted from the database at request time. Administrators see all cases; everyone else sees their own.",
+        "operationId": "dashboard_api_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStats"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/activity": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Recent activity (from the audit log)",
+        "operationId": "activity_api_activity_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityOut"
+                  },
+                  "title": "Response Activity Api Activity Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases": {
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Open a new case",
+        "description": "Creates a case and generates its unique ID (`SA-<year>-<6 characters>`).",
+        "operationId": "create_case_api_cases_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "List and search cases",
+        "operationId": "list_cases_api_cases_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Matches case ID, title, investigator reference, investigator name or witness name.",
+              "title": "Q"
+            },
+            "description": "Matches case ID, title, investigator reference, investigator name or witness name."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "in_progress",
+                    "under_review",
+                    "closed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "updated_desc",
+                "created_desc",
+                "title_asc",
+                "incident_desc"
+              ],
+              "type": "string",
+              "default": "updated_desc",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "One case",
+        "operationId": "get_case_api_cases__case_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found (or not yours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Edit a case, change its status or reopen it",
+        "description": "Set `status` to `in_progress` to reopen a closed case. A closed case can only have its status changed.",
+        "operationId": "update_case_api_cases__case_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found (or not yours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Delete a case and all its data",
+        "description": "Removes the case, its descriptions, notes, sketch versions and stored image files. This cannot be undone.",
+        "operationId": "delete_case_api_cases__case_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Case not found (or not yours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/notes": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Investigator notes of a case",
+        "operationId": "list_notes_api_cases__case_id__notes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NoteOut"
+                  },
+                  "title": "Response List Notes Api Cases  Case Id  Notes Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found (or not yours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "summary": "Add a note",
+        "description": "Notes are append-only: they cannot be edited or deleted, to keep an audit trail.",
+        "operationId": "add_note_api_cases__case_id__notes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found (or not yours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/descriptions/parse": {
+      "post": {
+        "tags": [
+          "Witness descriptions"
+        ],
+        "summary": "Read a witness description (nothing is saved)",
+        "description": "Extracts candidate attributes from English, Kannada or Hindi text with a rule-based parser. Every value comes with the words that caused it. Phrases that were not understood are returned in `unrecognized`, never guessed. This is NOT a trained AI model and gives no confidence score.",
+        "operationId": "parse_description_api_descriptions_parse_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/cases/{case_id}/descriptions": {
+      "get": {
+        "tags": [
+          "Witness descriptions"
+        ],
+        "summary": "Saved descriptions of a case",
+        "operationId": "list_descriptions_api_cases__case_id__descriptions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DescriptionOut"
+                  },
+                  "title": "Response List Descriptions Api Cases  Case Id  Descriptions Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Witness descriptions"
+        ],
+        "summary": "Save a witness description with its reviewed attributes",
+        "description": "The server parses the text itself (it never trusts client-supplied extraction) and stores the original text unchanged. `confirmed_attributes` are the values after the investigator's review; if omitted, the parser's output is used.",
+        "operationId": "save_description_api_cases__case_id__descriptions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescriptionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescriptionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/descriptions/{description_id}": {
+      "put": {
+        "tags": [
+          "Witness descriptions"
+        ],
+        "summary": "Update the reviewed attributes of a saved description",
+        "description": "Only the reviewed attributes and the free-text details can change. The original witness text is never edited.",
+        "operationId": "update_description_api_cases__case_id__descriptions__description_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Description Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescriptionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescriptionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sketches/generate": {
+      "post": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "Generate a sketch (creates a new version)",
+        "description": "`engine=schematic` draws a rule-based diagram (NOT AI) and always works. `engine=ai` uses the configured AI engine and returns **503 with setup steps** if none is configured - there is never a silent fallback to the schematic engine. Attributes come from `attributes`, else from the reviewed attributes of `description_id`.",
+        "operationId": "generate_sketch_api_sketches_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SketchVersionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Nothing to draw / no supported change in the instruction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The chosen engine is not set up (the body lists the setup steps)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The engine failed or returned an unusable image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/sketches/{sketch_id}/revise": {
+      "post": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "Revise a sketch with an instruction (creates a new version)",
+        "description": "Reads the instruction (English comparatives such as 'thicker eyebrows', explicit values and removals in English, Hindi or Kannada), turns it into attribute changes and draws a **new** version. The version you revise is never modified. Parts of the instruction that could not be applied are listed in `revision_details.ignored`.",
+        "operationId": "revise_sketch_api_sketches__sketch_id__revise_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sketch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Sketch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SketchVersionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Nothing to draw / no supported change in the instruction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The chosen engine is not set up (the body lists the setup steps)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The engine failed or returned an unusable image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/sketch-versions": {
+      "get": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "All versions of a case, oldest first",
+        "operationId": "list_versions_api_sketch_versions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Public case ID.",
+              "title": "Case Id"
+            },
+            "description": "Public case ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SketchVersionList"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sketch-versions/{sketch_id}": {
+      "get": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "One sketch version",
+        "operationId": "get_version_api_sketch_versions__sketch_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sketch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Sketch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SketchVersionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sketch-versions/{sketch_id}/image": {
+      "get": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "The sketch image (PNG)",
+        "description": "Requires the Authorization header. With `download=true` the PNG gets a caption band stating how the image was made (AI or not), the case, version and time, and is sent as an attachment. The stored file itself is never altered.",
+        "operationId": "get_image_api_sketch_versions__sketch_id__image_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sketch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Sketch Id"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Download"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "image/png": {}
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sketch-versions/{sketch_id}/thumbnail": {
+      "get": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "Small preview (PNG)",
+        "operationId": "get_thumbnail_api_sketch_versions__sketch_id__thumbnail_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sketch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Sketch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "image/png": {}
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sketch-versions/{sketch_id}/select": {
+      "post": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "Select a version as the working copy and report sketch",
+        "description": "Exactly one version per case is selected. It is the one shown in the PDF report. Selecting never changes any image.",
+        "operationId": "select_version_api_sketch_versions__sketch_id__select_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sketch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Sketch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SketchVersionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/engines": {
+      "get": {
+        "tags": [
+          "Sketches"
+        ],
+        "summary": "Status of every sketch engine",
+        "description": "Shows which engines can run right now and why not. `verified` is true only after a real request succeeded since the server started. `last_evaluated_at` comes from stored evaluations and is null when an engine was never evaluated.",
+        "operationId": "engines_api_engines_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EngineStatusOut"
+                  },
+                  "type": "array",
+                  "title": "Response Engines Api Engines Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/datasets/status": {
+      "get": {
+        "tags": [
+          "Datasets and evaluation"
+        ],
+        "summary": "Which datasets are installed, and what is in them",
+        "description": "Counts come only from real inspections stored in the database. A dataset that is not installed shows zero records. Nothing is downloaded automatically: the three published face-sketch collections have access restrictions and must be obtained by you under their own terms.",
+        "operationId": "datasets_status_api_datasets_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/datasets/inspect": {
+      "post": {
+        "tags": [
+          "Datasets and evaluation"
+        ],
+        "summary": "Inspect dataset folders (admin)",
+        "description": "Walks the dataset folder, checks that images can be opened and (for the custom dataset) validates every CSV row. Replaces the stored inventory of the inspected dataset with the fresh result.",
+        "operationId": "inspect_api_datasets_inspect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/evaluations": {
+      "get": {
+        "tags": [
+          "Datasets and evaluation"
+        ],
+        "summary": "Stored evaluation runs, newest first",
+        "description": "Only real runs are stored. The list is empty until an administrator runs an evaluation.",
+        "operationId": "list_evaluations_api_evaluations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Evaluations Api Evaluations Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Datasets and evaluation"
+        ],
+        "summary": "Run the description-parser evaluation (admin)",
+        "description": "Parses every valid example of the custom dataset in the chosen split and compares the result with its labels. The number of examples (n) is stored with the metrics. The result carries the limitations of this particular test set.",
+        "operationId": "run_evaluation_api_evaluations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/cases/{case_id}/report": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Download the case report (PDF)",
+        "description": "Includes case details, the witness text exactly as entered, the reviewed attributes, the selected sketch with its provenance caption, the full version history with instructions, investigator notes, the generation time, and the disclaimers: 'preliminary investigative aid requiring human review' and 'no identification'.",
+        "operationId": "case_report_api_cases__case_id__report_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/pdf": {}
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivityOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "case_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Ref"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "summary",
+          "case_ref",
+          "username",
+          "created_at"
+        ],
+        "title": "ActivityOut"
+      },
+      "CaseCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Title"
+          },
+          "incident_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Incident Date"
+          },
+          "incident_description": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Incident Description",
+            "default": ""
+          },
+          "investigator_ref": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Investigator Ref",
+            "description": "Your reference or badge number (letters, digits, space, - _ . /)."
+          },
+          "investigator_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Investigator Name",
+            "description": "Name of the investigator in charge of this case."
+          },
+          "witness_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Witness Name",
+            "description": "Name of the witness who gave the description. Use a neutral code such as W-01 if the name must be withheld."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "incident_date",
+          "investigator_ref",
+          "investigator_name",
+          "witness_name"
+        ],
+        "title": "CaseCreate"
+      },
+      "CaseDetail": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "incident_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Incident Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "under_review",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "investigator_ref": {
+            "type": "string",
+            "title": "Investigator Ref"
+          },
+          "investigator_name": {
+            "type": "string",
+            "title": "Investigator Name",
+            "default": ""
+          },
+          "witness_name": {
+            "type": "string",
+            "title": "Witness Name",
+            "default": ""
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "description_count": {
+            "type": "integer",
+            "title": "Description Count",
+            "default": 0
+          },
+          "sketch_count": {
+            "type": "integer",
+            "title": "Sketch Count",
+            "default": 0
+          },
+          "selected_sketch_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Sketch Id"
+          },
+          "incident_description": {
+            "type": "string",
+            "title": "Incident Description"
+          },
+          "note_count": {
+            "type": "integer",
+            "title": "Note Count",
+            "default": 0
+          },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Username"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "title",
+          "incident_date",
+          "status",
+          "investigator_ref",
+          "created_at",
+          "updated_at",
+          "incident_description"
+        ],
+        "title": "CaseDetail"
+      },
+      "CaseList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "CaseList"
+      },
+      "CaseSummary": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "incident_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Incident Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "under_review",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "investigator_ref": {
+            "type": "string",
+            "title": "Investigator Ref"
+          },
+          "investigator_name": {
+            "type": "string",
+            "title": "Investigator Name",
+            "default": ""
+          },
+          "witness_name": {
+            "type": "string",
+            "title": "Witness Name",
+            "default": ""
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "description_count": {
+            "type": "integer",
+            "title": "Description Count",
+            "default": 0
+          },
+          "sketch_count": {
+            "type": "integer",
+            "title": "Sketch Count",
+            "default": 0
+          },
+          "selected_sketch_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Sketch Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "title",
+          "incident_date",
+          "status",
+          "investigator_ref",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CaseSummary"
+      },
+      "CaseUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "incident_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Date"
+          },
+          "incident_description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Description"
+          },
+          "investigator_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Ref"
+          },
+          "investigator_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Name"
+          },
+          "witness_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Witness Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "under_review",
+                  "closed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CaseUpdate"
+      },
+      "ChangeOut": {
+        "properties": {
+          "attribute": {
+            "type": "string",
+            "title": "Attribute"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "type": "string",
+            "title": "After"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribute",
+          "label",
+          "before",
+          "after",
+          "evidence",
+          "kind"
+        ],
+        "title": "ChangeOut"
+      },
+      "ConflictOut": {
+        "properties": {
+          "attribute": {
+            "type": "string",
+            "title": "Attribute"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Values"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribute",
+          "values",
+          "evidence"
+        ],
+        "title": "ConflictOut"
+      },
+      "DashboardStats": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "own",
+              "all"
+            ],
+            "title": "Scope"
+          },
+          "total_cases": {
+            "type": "integer",
+            "title": "Total Cases"
+          },
+          "status_counts": {
+            "$ref": "#/components/schemas/StatusCounts"
+          },
+          "cases_with_selected_sketch": {
+            "type": "integer",
+            "title": "Cases With Selected Sketch"
+          },
+          "witness_descriptions": {
+            "type": "integer",
+            "title": "Witness Descriptions"
+          },
+          "sketch_versions": {
+            "type": "integer",
+            "title": "Sketch Versions"
+          },
+          "schematic_versions": {
+            "type": "integer",
+            "title": "Schematic Versions"
+          },
+          "ai_versions": {
+            "type": "integer",
+            "title": "Ai Versions"
+          },
+          "notes": {
+            "type": "integer",
+            "title": "Notes"
+          },
+          "recent_cases": {
+            "items": {
+              "$ref": "#/components/schemas/CaseSummary"
+            },
+            "type": "array",
+            "title": "Recent Cases"
+          },
+          "recent_activity": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityOut"
+            },
+            "type": "array",
+            "title": "Recent Activity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "total_cases",
+          "status_counts",
+          "cases_with_selected_sketch",
+          "witness_descriptions",
+          "sketch_versions",
+          "schematic_versions",
+          "ai_versions",
+          "notes",
+          "recent_cases",
+          "recent_activity"
+        ],
+        "title": "DashboardStats"
+      },
+      "DatasetStatus": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "external",
+              "custom"
+            ],
+            "title": "Kind"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "licence": {
+            "type": "string",
+            "title": "Licence"
+          },
+          "access": {
+            "type": "string",
+            "title": "Access",
+            "description": "How to obtain the data legitimately. Nothing is downloaded automatically."
+          },
+          "citation": {
+            "type": "string",
+            "title": "Citation"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "expected_path": {
+            "type": "string",
+            "title": "Expected Path"
+          },
+          "installed": {
+            "type": "boolean",
+            "title": "Installed",
+            "description": "Whether files are present in the expected folder right now."
+          },
+          "inspected": {
+            "type": "boolean",
+            "title": "Inspected"
+          },
+          "last_inspected_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Inspected At"
+          },
+          "files_found": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files Found",
+            "description": "From the last inspection; null = never inspected."
+          },
+          "records": {
+            "type": "integer",
+            "title": "Records",
+            "description": "Rows stored in the database by the last inspection."
+          },
+          "valid_records": {
+            "type": "integer",
+            "title": "Valid Records"
+          },
+          "labelled_records": {
+            "type": "integer",
+            "title": "Labelled Records"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "translation_review": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Translation Review",
+            "description": "Custom dataset only: number of rows per translation review status."
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "kind",
+          "description",
+          "licence",
+          "access",
+          "citation",
+          "source_url",
+          "expected_path",
+          "installed",
+          "inspected",
+          "last_inspected_at",
+          "files_found",
+          "records",
+          "valid_records",
+          "labelled_records",
+          "notes"
+        ],
+        "title": "DatasetStatus"
+      },
+      "DatasetStatusResponse": {
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetStatus"
+            },
+            "type": "array",
+            "title": "Datasets"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Totals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets",
+          "totals"
+        ],
+        "title": "DatasetStatusResponse"
+      },
+      "DescriptionCreate": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label",
+            "description": "Who gave this description, for example the witness's name or 'Witness 2'. It is printed in the report.",
+            "default": "Witness 1"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "en"
+          },
+          "original_text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Original Text"
+          },
+          "confirmed_attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Attributes",
+            "description": "The attributes after the investigator reviewed them. Defaults to the parser's output."
+          },
+          "additional_details": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Additional Details",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "original_text"
+        ],
+        "title": "DescriptionCreate"
+      },
+      "DescriptionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "original_text": {
+            "type": "string",
+            "title": "Original Text"
+          },
+          "extracted_attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Extracted Attributes"
+          },
+          "confirmed_attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Confirmed Attributes"
+          },
+          "additional_details": {
+            "type": "string",
+            "title": "Additional Details"
+          },
+          "parse_details": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedValueOut"
+            },
+            "type": "array",
+            "title": "Parse Details"
+          },
+          "unrecognized": {
+            "items": {
+              "$ref": "#/components/schemas/UnrecognizedOut"
+            },
+            "type": "array",
+            "title": "Unrecognized"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "parser_version": {
+            "type": "string",
+            "title": "Parser Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "review_status": {
+            "type": "string",
+            "enum": [
+              "parser_output",
+              "edited_by_investigator"
+            ],
+            "title": "Review Status",
+            "default": "parser_output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "language",
+          "original_text",
+          "extracted_attributes",
+          "confirmed_attributes",
+          "additional_details",
+          "parse_details",
+          "unrecognized",
+          "warnings",
+          "parser_version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DescriptionOut"
+      },
+      "DescriptionUpdate": {
+        "properties": {
+          "confirmed_attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Confirmed Attributes"
+          },
+          "additional_details": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Additional Details",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmed_attributes"
+        ],
+        "title": "DescriptionUpdate",
+        "description": "Only the reviewed attributes can change. The original text is never edited."
+      },
+      "EngineStatusOut": {
+        "properties": {
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "is_ai": {
+            "type": "boolean",
+            "title": "Is Ai"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "setup_required",
+              "disabled"
+            ],
+            "title": "State"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "setup_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Setup Steps"
+          },
+          "supports_generate": {
+            "type": "boolean",
+            "title": "Supports Generate"
+          },
+          "supports_edit": {
+            "type": "boolean",
+            "title": "Supports Edit"
+          },
+          "models": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Models"
+          },
+          "licence_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licence Note"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified",
+            "description": "True only after a real request succeeded since the server started."
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_error_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error At"
+          },
+          "last_evaluated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Evaluated At",
+            "description": "From stored evaluations; null = never evaluated."
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine",
+          "label",
+          "is_ai",
+          "state",
+          "available",
+          "detail",
+          "setup_steps",
+          "supports_generate",
+          "supports_edit",
+          "models",
+          "licence_note",
+          "verified",
+          "last_success_at",
+          "last_error",
+          "last_error_at"
+        ],
+        "title": "EngineStatusOut"
+      },
+      "ErrorBody": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "code"
+        ],
+        "title": "ErrorBody"
+      },
+      "EvaluationOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "evaluation_type": {
+            "type": "string",
+            "title": "Evaluation Type"
+          },
+          "target_name": {
+            "type": "string",
+            "title": "Target Name"
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version"
+          },
+          "dataset_name": {
+            "type": "string",
+            "title": "Dataset Name"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split"
+          },
+          "n_examples": {
+            "type": "integer",
+            "title": "N Examples"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "evaluation_type",
+          "target_name",
+          "target_version",
+          "dataset_name",
+          "dataset_version",
+          "split",
+          "n_examples",
+          "metrics",
+          "notes",
+          "status",
+          "created_at"
+        ],
+        "title": "EvaluationOut"
+      },
+      "EvaluationRequest": {
+        "properties": {
+          "evaluation_type": {
+            "type": "string",
+            "const": "description_parser",
+            "title": "Evaluation Type",
+            "default": "description_parser"
+          },
+          "split": {
+            "type": "string",
+            "enum": [
+              "dev",
+              "test",
+              "all"
+            ],
+            "title": "Split",
+            "default": "all"
+          },
+          "only_reviewed_translations": {
+            "type": "boolean",
+            "title": "Only Reviewed Translations",
+            "description": "Evaluate only rows whose translation was reviewed by a human.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvaluationRequest"
+      },
+      "ExtractedValueOut": {
+        "properties": {
+          "attribute": {
+            "type": "string",
+            "title": "Attribute"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence",
+            "description": "Words copied from the witness text that caused this value."
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "match_type": {
+            "type": "string",
+            "title": "Match Type"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribute",
+          "value",
+          "evidence",
+          "language",
+          "match_type"
+        ],
+        "title": "ExtractedValueOut"
+      },
+      "GenerateRequest": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Public case ID, e.g. SA-2026-7K3QWP."
+          },
+          "description_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Id",
+            "description": "Use this saved description's reviewed attributes."
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes",
+            "description": "Attributes to draw. Overrides the description's reviewed attributes if given."
+          },
+          "additional_details": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Details"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "schematic"
+            ],
+            "title": "Engine",
+            "description": "'schematic' = rule-based drawing (not AI). 'ai' = the configured AI engine (needs setup)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_id",
+          "engine"
+        ],
+        "title": "GenerateRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IgnoredOut": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "reason"
+        ],
+        "title": "IgnoredOut"
+      },
+      "InspectProblem": {
+        "properties": {
+          "record": {
+            "type": "string",
+            "title": "Record"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record",
+          "problems"
+        ],
+        "title": "InspectProblem"
+      },
+      "InspectRequest": {
+        "properties": {
+          "dataset_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cufs",
+                  "cufsf",
+                  "uom_sgfs",
+                  "custom_attributes"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Key",
+            "description": "Inspect one dataset, or all if omitted."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InspectRequest"
+      },
+      "InspectResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/InspectResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "InspectResponse"
+      },
+      "InspectResult": {
+        "properties": {
+          "dataset_key": {
+            "type": "string",
+            "title": "Dataset Key"
+          },
+          "installed": {
+            "type": "boolean",
+            "title": "Installed"
+          },
+          "files_found": {
+            "type": "integer",
+            "title": "Files Found"
+          },
+          "valid": {
+            "type": "integer",
+            "title": "Valid"
+          },
+          "invalid": {
+            "type": "integer",
+            "title": "Invalid"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/InspectProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "inspected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Inspected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_key",
+          "installed",
+          "files_found",
+          "valid",
+          "invalid",
+          "truncated",
+          "summary",
+          "problems",
+          "notes",
+          "inspected_at"
+        ],
+        "title": "InspectResult"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "NoteCreate": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "sketch_version_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sketch Version Id",
+            "description": "Optionally attach the note to a sketch version."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "NoteCreate"
+      },
+      "NoteOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "sketch_version_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sketch Version Id"
+          },
+          "author_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Username"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "body",
+          "sketch_version_id",
+          "author_username",
+          "created_at"
+        ],
+        "title": "NoteOut"
+      },
+      "ParseRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Text",
+            "description": "The witness description (English, Kannada or Hindi)."
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "en, kn or hi",
+            "default": "en"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ParseRequest"
+      },
+      "ParseResponse": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Attributes"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedValueOut"
+            },
+            "type": "array",
+            "title": "Details"
+          },
+          "unrecognized": {
+            "items": {
+              "$ref": "#/components/schemas/UnrecognizedOut"
+            },
+            "type": "array",
+            "title": "Unrecognized"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ConflictOut"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "declared_language": {
+            "type": "string",
+            "title": "Declared Language"
+          },
+          "detected_scripts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Detected Scripts"
+          },
+          "parser_name": {
+            "type": "string",
+            "title": "Parser Name"
+          },
+          "parser_version": {
+            "type": "string",
+            "title": "Parser Version"
+          },
+          "lexicon_status": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Lexicon Status",
+            "description": "Review status of each language's word list."
+          },
+          "notice": {
+            "type": "string",
+            "title": "Notice",
+            "description": "Reminder that the output is an editable estimate."
+          }
+        },
+        "type": "object",
+        "required": [
+          "attributes",
+          "details",
+          "unrecognized",
+          "conflicts",
+          "warnings",
+          "declared_language",
+          "detected_scripts",
+          "parser_name",
+          "parser_version",
+          "lexicon_status",
+          "notice"
+        ],
+        "title": "ParseResponse"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "3-32 characters: letters, digits, underscore, dot or hyphen."
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "Password",
+            "description": "At least 10 characters."
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "acknowledge_responsible_use": {
+            "type": "boolean",
+            "title": "Acknowledge Responsible Use",
+            "description": "Must be true: confirms you have read the responsible-use statement."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "acknowledge_responsible_use"
+        ],
+        "title": "RegisterRequest"
+      },
+      "ReviseRequest": {
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Instruction",
+            "description": "For example: 'make the eyebrows thicker and add glasses'."
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "en"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ai",
+                  "schematic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine",
+            "description": "Defaults to the kind of engine that made the sketch being revised."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instruction"
+        ],
+        "title": "ReviseRequest"
+      },
+      "RevisionDetails": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeOut"
+            },
+            "type": "array",
+            "title": "Changes",
+            "default": []
+          },
+          "ignored": {
+            "items": {
+              "$ref": "#/components/schemas/IgnoredOut"
+            },
+            "type": "array",
+            "title": "Ignored",
+            "default": []
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "RevisionDetails"
+      },
+      "SketchVersionList": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SketchVersionOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "items"
+        ],
+        "title": "SketchVersionList"
+      },
+      "SketchVersionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Public case ID this sketch belongs to."
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "parent_version_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Version Number"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "revision"
+            ],
+            "title": "Kind"
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "instruction_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instruction Language"
+          },
+          "target_attribute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Attribute"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Attributes"
+          },
+          "additional_details": {
+            "type": "string",
+            "title": "Additional Details"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "engine_label": {
+            "type": "string",
+            "title": "Engine Label"
+          },
+          "is_ai_generated": {
+            "type": "boolean",
+            "title": "Is Ai Generated"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "revision_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevisionDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_selected": {
+            "type": "boolean",
+            "title": "Is Selected"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "version_number",
+          "parent_id",
+          "kind",
+          "instruction",
+          "instruction_language",
+          "target_attribute",
+          "attributes",
+          "additional_details",
+          "engine",
+          "engine_label",
+          "is_ai_generated",
+          "model_name",
+          "notes",
+          "is_selected",
+          "created_at",
+          "width",
+          "height",
+          "file_size",
+          "sha256",
+          "image_url",
+          "thumbnail_url",
+          "download_url"
+        ],
+        "title": "SketchVersionOut"
+      },
+      "StatusCounts": {
+        "properties": {
+          "in_progress": {
+            "type": "integer",
+            "title": "In Progress",
+            "default": 0
+          },
+          "under_review": {
+            "type": "integer",
+            "title": "Under Review",
+            "default": 0
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "StatusCounts"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "description": "Seconds until the token expires."
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_in",
+          "user"
+        ],
+        "title": "TokenResponse"
+      },
+      "UnrecognizedOut": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "reason"
+        ],
+        "title": "UnrecognizedOut"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "role",
+          "created_at"
+        ],
+        "title": "UserOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Log in at POST /api/auth/login, then paste the access_token here.",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Meta",
+      "description": "Health check and the controlled vocabulary."
+    },
+    {
+      "name": "Authentication",
+      "description": "Register, sign in, who am I."
+    },
+    {
+      "name": "Dashboard",
+      "description": "Numbers and recent activity, counted from the database."
+    },
+    {
+      "name": "Cases",
+      "description": "Create, search, edit, reopen and delete cases; investigator notes."
+    },
+    {
+      "name": "Witness descriptions",
+      "description": "Parse English / Kannada / Hindi descriptions into editable attributes."
+    },
+    {
+      "name": "Sketches",
+      "description": "Generate and revise sketches; compare, select and download versions; engine status."
+    },
+    {
+      "name": "Datasets and evaluation",
+      "description": "Dataset inventory and parser evaluation (real runs only)."
+    },
+    {
+      "name": "Reports",
+      "description": "PDF case report."
+    }
+  ]
+}

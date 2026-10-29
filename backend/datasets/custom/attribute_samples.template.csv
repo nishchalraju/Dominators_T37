@@ -1,0 +1,2 @@
+sample_id,group_id,split,language,description_text,apparent_gender,age_description,skin_colour,face_shape,hair_length,hair_style,eyebrows,eye_shape,nose_shape,mouth_shape,facial_hair,glasses,translation_review_status,reviewer_id,reviewed_on,annotation_method,permission_status,image_file,notes
+EXAMPLE-001,EXAMPLE,dev,en,DELETE THIS EXAMPLE ROW. A man with a round face and a beard.,male,,,round,,,,,,,beard,,original,,,developer_authored,synthetic_no_real_person,,Example row - delete it

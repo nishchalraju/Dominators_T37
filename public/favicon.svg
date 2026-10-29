@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SketchAssist AI">
+  <rect width="64" height="64" rx="14" fill="#0d1524"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#1f2a3f" stroke-width="2"/>
+  <ellipse cx="32" cy="30" rx="13" ry="17" fill="none" stroke="#22d3ee" stroke-width="3"/>
+  <path d="M19 26c1-9 7-14 13-14s12 5 13 14" fill="none" stroke="#67e8f9" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>
+  <path d="M14 54c3-8 10-11 18-11s15 3 18 11" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+</svg>
